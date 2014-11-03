@@ -1,11 +1,9 @@
 ---
-- hosts: vagrant
-  user: vagrant
-
+- hosts: all
   vars:
     gem_bin_path: ~/.rvm/gems/$ruby/bin
-    ruby: ruby-1.9.3
-    user: vagrant
+    locale: en_US.UTF-8
+    timezone: America/New_York
 
   tasks:
     - name: update sudoers
@@ -20,36 +18,79 @@
       apt: update_cache=yes
       sudo: True
 
+    - name: Generate locales
+      command: locale-gen {{ locale }}
+      tags: [locale]
+      sudo: True
+
+    - name: Set locale
+      command: /usr/sbin/update-locale LANG={{ locale }} LC_ALL=$locale
+      tags: [locale]
+      sudo: True
+
+    # - name: Set /etc/localtime
+    #   file: src=/usr/share/zoneinfo/{{ timezone }} dest=/etc/localtime state=link
+    #   tags: [locale]
+    #   sudo: True
+
+    # - name: set /etc/timezone
+    #   template: src=templates/etc/timezone dest=/etc/timezone
+    #   notify: update tzdata
+    #   tags: [locale]
+    #   sudo: True
+
     - name: install userspace packages
       apt: pkg=$item state=installed
       sudo: True
       with_items:
         - augeas-tools
+        - autoconf
+        - automake
+        - bison
         - build-essential
         - curl
+        - emacs
         - git
+        - git-core
+        - imagemagick
         - libxml2-dev # Nokogiri
         - libxslt1-dev # Nokogiri
         - libyaml-dev
         - libaugeas-dev
-        - libaugeas-ruby 
-        - libgdbm-dev
-        - libtool
+        - libaugeas-ruby
+        - libc6-dev
+        - libcurl4-openssl-dev
         - libffi-dev
+        - libgdbm-dev
+        - libmagickwand-dev
+        - libncurses5-dev
+        - libpcre3-dev
         - libpq-dev
+        - libreadline6
+        - libreadline6-dev
+        - libsqlite3-dev 
+        - libssl-dev
+        - libyaml-dev
+        - libxml2-dev 
+        - libxslt1-dev
+        - libtool
         - memcached
+        - openssl
+        - pkg-config
+        - postgresql
         - postgresql-contrib
         - python-dev
         - python-setuptools
         - python-software-properties
-        - pkg-config
-        - postgresql
         - python-psycopg2
+        - sqlite3
         - tmux
         - vim
         - whois
         - xorg
-        - zsh
+        - zlib1g 
+        - zlib1g-dev 
+
 
     - name: install RVM
       shell: curl -L https://get.rvm.io | bash
@@ -60,9 +101,9 @@
       shell: /bin/bash -c 'source /home/vagrant/.rvm/scripts/rvm'
       tags: [ruby]
       sudo: False
-    
+
     # NEW POSTGRES CONF STUFF
-    
+
     - name: install python libraries
       action: easy_install name=psycopg2==2.4.5
       sudo: True
@@ -78,30 +119,29 @@
         - restart postgresql
 
     - name: update postgres client configuration
-      action: template src=templates/pg_hba.conf.j2 dest=/etc/postgresql/9.1/main/pg_hba.conf
+      template: src=templates/pg_hba.conf.j2 dest=/etc/postgresql/9.1/main/pg_hba.conf
       sudo: True
       notify:
         - restart postgresql
 
-    - name: make sure vagrant user doesnt already exist
-      shell: sudo -u postgres psql -d template1 -c "DROP USER IF EXISTS vagrant;"
-      notify:
-        - restart postgresql
+    - name: ensure database is created
+      postgresql_db: name={{dbname}}
+      sudo: yes
+      sudo_user: postgres
 
-    - name: create a vagrant super user 
-      shell: sudo -u postgres psql -d template1 -c "create user vagrant; alter user vagrant with superuser;"
-      notify:
-        - restart postgresql
+    - name: ensure user has access to database
+      postgresql_user: db={{dbname}} name={{dbuser}} password={{dbpassword}} priv=ALL
+      sudo: yes
+      sudo_user: postgres
 
-    #- name: create test database
-    #  action: postgresql_db name=vagrant_ansible_tutorial owner=vagrant
-    #  sudo: True
-    #  sudo_user: postgres
-
+    # - name: ensure user does not have unnecessary privilege
+    #   postgresql_user: name={{dbuser}} role_attr_flags=NOSUPERUSER,NOCREATEDB
+    #   sudo: yes
+    #   sudo_user: postgres
       # END NEW POSTGRES CONF STUFF
-      
+
     - name: install Ruby 
-      shell: /home/vagrant/.rvm/bin/rvm install --default 1.9.3-p429 # creates=~/.rvm/rubies/$ruby
+      shell: /home/vagrant/.rvm/bin/rvm install --default {{ ruby }} # creates=~/.rvm/rubies/$ruby
       sudo: False
       tags: [ruby]
 
@@ -109,43 +149,10 @@
       shell: /home/vagrant/.rvm/bin/rvm @global do gem install --no-ri --no-rdoc bundler pry pry-doc 
       sudo: False
 
-    - name: install rails 
-      shell: /home/vagrant/.rvm/bin/rvm 1.9.3-p429 do gem install --no-ri --no-rdoc rails -v 3.2.13
-      sudo: False
-      tags: [ruby]
-
-    - name:  install oh-my-zsh
-      shell: curl -L https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh
-      tags: [zsh]
-
-    - name: copy config files for vimrc
-      action: copy src=/Users/akira/.vimrc dest=/home/vagrant/.vimrc
-
-    - name: copy config files for zsh profile 
-      action: copy src=/Users/akira/.zprofile dest=/home/vagrant/.zprofile
-
-    - name: copy config files for zshrc 
-      action: copy src=/Users/akira/.zshrc dest=/home/vagrant/.zshrc
-
-    - name: copy config files for zsh aliases 
-      action: copy src=/Users/akira/.aliases dest=/home/vagrant/.aliases
-
-    - name: copy config files for bash aliases
-      action: copy src=/Users/akira/.bash_aliases dest=/home/vagrant/.bash_aliases
-
-    #use rsync for recursive file copying
-    - name: rsync recursive copy for oh my zsh 
-      local_action: shell rsync -puavxSH -e "ssh" --delete --owner=vagrant --chmod=u=rX,g=rX,o=rXw /Users/akira/.oh-my-zsh vagrant@192.168.111.8:/home/vagrant
-
-    - name: rsync recursive copy for vim config files 
-      local_action: shell rsync -puavxSH -e "ssh" --delete --owner=vagrant --chmod=u=rX,g=rX,o=rXw /Users/akira/.vim vagrant@192.168.111.8:/home/vagrant
-
-    - name: switch to ZSH
-      user: name=$user shell=/usr/bin/zsh
-      sudo: True
-      tags: [packages, users]
-
   handlers:
     - name: restart postgresql
       action: service name=postgresql state=restarted
       sudo: True
+
+    - name: update tzdata
+      command: /usr/sbin/dpkg-reconfigure --frontend noninteractive tzdata
