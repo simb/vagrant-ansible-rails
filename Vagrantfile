@@ -1,6 +1,6 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-box_name = "precise64"
+box_name = "hashicorp/precise64"
 static_ip = "192.168.111.8"
 
 Vagrant.configure("2") do |config|
@@ -11,7 +11,7 @@ Vagrant.configure("2") do |config|
 
     #might we need this for nfs?
     config.vm.network :private_network, ip: "#{static_ip}"
-    
+
     config.vm.provision :ansible do |ansible|
       ansible.playbook = "provisioning/playbook.yml"
       ansible.extra_vars = {
@@ -22,4 +22,4 @@ Vagrant.configure("2") do |config|
         dbpassword: "rails",
       }
     end
-end 
+end
