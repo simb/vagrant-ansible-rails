@@ -1,7 +1,7 @@
 ---
 - hosts: all
   vars:
-    gem_bin_path: ~/.rvm/gems/$ruby/bin
+    gem_bin_path: ~/.rvm/gems/{{ruby}}/bin
     locale: en_US.UTF-8
     timezone: America/New_York
 
@@ -14,7 +14,7 @@
       action: command /usr/bin/apt-get update
       sudo: True
 
-    - name: update cache 
+    - name: update cache
       apt: update_cache=yes
       sudo: True
 
@@ -24,7 +24,7 @@
       sudo: True
 
     - name: Set locale
-      command: /usr/sbin/update-locale LANG={{ locale }} LC_ALL=$locale
+      command: /usr/sbin/update-locale LANG={{ locale }} LC_ALL={{ locale }}
       tags: [locale]
       sudo: True
 
@@ -40,7 +40,7 @@
     #   sudo: True
 
     - name: install userspace packages
-      apt: pkg=$item state=installed
+      apt: pkg={{item}} state=installed
       sudo: True
       with_items:
         - augeas-tools
@@ -68,10 +68,10 @@
         - libpq-dev
         - libreadline6
         - libreadline6-dev
-        - libsqlite3-dev 
+        - libsqlite3-dev
         - libssl-dev
         - libyaml-dev
-        - libxml2-dev 
+        - libxml2-dev
         - libxslt1-dev
         - libtool
         - memcached
@@ -88,8 +88,8 @@
         - vim
         - whois
         - xorg
-        - zlib1g 
-        - zlib1g-dev 
+        - zlib1g
+        - zlib1g-dev
 
 
     - name: install RVM
@@ -140,13 +140,18 @@
     #   sudo_user: postgres
       # END NEW POSTGRES CONF STUFF
 
-    - name: install Ruby 
+    - name: install Ruby
       shell: /home/vagrant/.rvm/bin/rvm install --default {{ ruby }} # creates=~/.rvm/rubies/$ruby
       sudo: False
       tags: [ruby]
 
+    - name: install Ruby sources
+      shell: /home/vagrant/.rvm/bin/rvm fetch {{ ruby }} # creates=~/.rvm/rubies/$ruby
+      sudo: False
+      tags: [ruby]
+
     - name: install base global gems
-      shell: /home/vagrant/.rvm/bin/rvm @global do gem install --no-ri --no-rdoc bundler pry pry-doc 
+      shell: /home/vagrant/.rvm/bin/rvm @global do gem install --no-ri --no-rdoc bundler pry pry-doc
       sudo: False
 
   handlers:

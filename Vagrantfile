@@ -16,10 +16,11 @@ Vagrant.configure("2") do |config|
       ansible.playbook = "provisioning/playbook.yml"
       ansible.extra_vars = {
         vagrant_static_ip: "#{static_ip}",
-        ruby: "ruby-2.0.0",
+        ruby: "ruby-2.0.0-p451",
         dbname: "hetexted_development",
         dbuser: "rails",
         dbpassword: "rails",
+        locale: "en_US"
       }
     end
 end
