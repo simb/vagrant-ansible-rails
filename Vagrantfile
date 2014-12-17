@@ -20,7 +20,7 @@ Vagrant.configure("2") do |config|
         dbname: "hetexted_development",
         dbuser: "rails",
         dbpassword: "rails",
-        locale: "en_US"
+        locale: "en_US.UTF-8"
       }
     end
 end
